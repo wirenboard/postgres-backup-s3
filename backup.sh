@@ -90,12 +90,12 @@ else
   DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
   echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}'..."
 
-  FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text || true)
+  FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
 
   if [ -z "$FILES_TO_DELETE" ]; then
     echo "No backups found to delete for yesterday (${YESTERDAY_DATE})."
   else
-    echo "$FILES_TO_DELETE" | while read -r file_key; do
+    echo "$FILES_TO_DELETE" | tr '\t' '\n' | while read -r file_key; do
       if [ -n "$file_key" ]; then
         echo "Deleting s3://${S3_BUCKET}/$file_key"
         aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/$file_key"
