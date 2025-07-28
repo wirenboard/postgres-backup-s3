@@ -51,19 +51,19 @@ else
   AWS_ARGS="--endpoint-url ${S3_ENDPOINT}"
 fi
 
-# экспорт переменных для aws cli
+# env vars needed for aws tools
 export AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY_ID}"
 export AWS_SECRET_ACCESS_KEY="${S3_SECRET_ACCESS_KEY}"
 export AWS_DEFAULT_REGION="${S3_REGION}"
 
-# экспорт для pg_dump
+# env vars needed for pg_dump
 export PGPASSWORD="${POSTGRES_PASSWORD}"
 POSTGRES_HOST_OPTS="-h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} ${POSTGRES_EXTRA_OPTS}"
 
-# даты в UTC
+# UTC-formatted date
 NOW_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# вычисляем дату "вчера" и "завтра" c помощью TZ (хак для busybox date)
+# define yesterday and tomorrow date
 YESTERDAY_DATE=$(TZ=GMT+24 date +%Y-%m-%d)
 TOMORROW_DATE=$(TZ=GMT-24 date +%Y-%m-%d)
 NEXT_DAY_OF_MONTH=$(echo "$TOMORROW_DATE" | cut -d- -f3)
@@ -83,7 +83,7 @@ echo "DB backup uploaded successfully: s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}"
 
 rm db.dump
 
-# Логика удаления бэкапа за вчера, если вчера не последний день месяца
+# Removing logic yesterday backup if tomorrow is not 01 day of month
 if [ "$NEXT_DAY_OF_MONTH" = "01" ]; then
   echo "Yesterday (${YESTERDAY_DATE}) was the last day of the month. Keeping backup."
 else
@@ -104,7 +104,7 @@ else
   fi
 fi
 
-# Уведомление об успешном бэкапе
+# Successful backup notification
 if [ ! "${SUCCESS_WEBHOOK}" = "**None**" ]; then
   echo "Notifying ${SUCCESS_WEBHOOK}"
   curl -m 10 --retry 5 "${SUCCESS_WEBHOOK}"
