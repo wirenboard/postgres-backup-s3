@@ -101,7 +101,7 @@ else
       aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/$file_key"
       fi
     done
-  fi
+fi
 
 # Successful backup notification
 if [ ! "${SUCCESS_WEBHOOK}" = "**None**" ]; then
