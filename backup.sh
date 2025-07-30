@@ -63,7 +63,7 @@ POSTGRES_HOST_OPTS="-h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} 
 # UTC-formatted date
 NOW_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# define yesterday and tomorrow date
+# define yesterday and today date
 YESTERDAY_DATE=$(TZ=GMT+24 date +%Y-%m-%d)
 TODAY_DATE=$(date +%Y-%m-%d)
 TODAY_NUMBER_DAY=$(echo "$TODAY_DATE" | cut -d- -f3)
@@ -84,11 +84,11 @@ echo "DB backup uploaded successfully: s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}"
 rm db.dump
 
 # Removing logic yesterday backup if tomorrow is not 01 day of month
+DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
+FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
 if [ "$TODAY_NUMBER_DAY" = "01" ]; then
   echo "Yesterday (${YESTERDAY_DATE}) was the last day of the month. Keeping only latest backup."
-  DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
   echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}' except latest one..."
-  FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
   FILES_LIST=$(echo "$FILES_TO_DELETE" | tr '\t' '\n')
   count=$(echo "$FILES_LIST" | wc -l)
   FILES_TO_REMOVE=$(echo "$FILES_LIST" | head -n -1)
@@ -101,11 +101,7 @@ if [ "$TODAY_NUMBER_DAY" = "01" ]; then
     fi
   done
 else
-  DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
   echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}'..."
-
-  FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
-
   if [ -z "$FILES_TO_DELETE" ]; then
     echo "No backups found to delete for yesterday (${YESTERDAY_DATE})."
   else
