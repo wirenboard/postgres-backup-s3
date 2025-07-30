@@ -88,31 +88,20 @@ DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
 FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
 if [ "$TODAY_NUMBER_DAY" = "01" ]; then
   echo "Yesterday (${YESTERDAY_DATE}) was the last day of the month. Keeping only latest backup."
-  echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}' except latest one..."
-  FILES_LIST=$(echo "$FILES_TO_DELETE" | tr '\t' '\n')
-  count=$(echo "$FILES_LIST" | wc -l)
-  FILES_TO_REMOVE=$(echo "$FILES_LIST" | head -n -1)
-  echo "Deleting backups except the latest:"
-  echo "$FILES_TO_REMOVE"
-  echo "$FILES_TO_REMOVE" | while IFS= read -r file_key; do
+  FILES_TO_DELETE=$(echo "$FILES_TO_DELETE" | tr '\t' '\n' | head -n -1)
+fi
+
+echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}'..."
+if [ -z "$FILES_TO_DELETE" ]; then
+  echo "No backups found to delete for yesterday (${YESTERDAY_DATE})."
+else
+  echo "$FILES_TO_DELETE" | tr '\t' '\n' | while read -r file_key; do
     if [ -n "$file_key" ]; then
       echo "Deleting s3://${S3_BUCKET}/$file_key"
       aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/$file_key"
-    fi
-  done
-else
-  echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}'..."
-  if [ -z "$FILES_TO_DELETE" ]; then
-    echo "No backups found to delete for yesterday (${YESTERDAY_DATE})."
-  else
-    echo "$FILES_TO_DELETE" | tr '\t' '\n' | while read -r file_key; do
-      if [ -n "$file_key" ]; then
-        echo "Deleting s3://${S3_BUCKET}/$file_key"
-        aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/$file_key"
       fi
     done
   fi
-fi
 
 # Successful backup notification
 if [ ! "${SUCCESS_WEBHOOK}" = "**None**" ]; then
