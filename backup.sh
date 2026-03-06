@@ -140,7 +140,7 @@ else
 
   # Removing logic yesterday backup if tomorrow is not 01 day of month
   DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
-  FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
+  FILES_TO_DELETE=$(aws "${AWS_ARGS}" s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
   if [ "${TODAY_NUMBER_DAY}" = "01" ]; then
     echo "Yesterday (${YESTERDAY_DATE}) was the last day of the month. Keeping only latest backup."
     FILES_TO_DELETE=$(echo "${FILES_TO_DELETE}" | tr '\t' '\n' | head -n -1)
