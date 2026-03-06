@@ -153,7 +153,7 @@ else
     echo "$FILES_TO_DELETE" | tr '\t' '\n' | while read -r file_key; do
       if [ -n "$file_key" ]; then
         echo "Deleting s3://${S3_BUCKET}/$file_key"
-        aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/$file_key"
+        aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/$file_key"
       fi
     done
   fi
