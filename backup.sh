@@ -66,15 +66,15 @@ NOW_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # define yesterday and today date
 YESTERDAY_DATE=$(TZ=GMT+24 date +%Y-%m-%d)
 TODAY_DATE=$(date +%Y-%m-%d)
-TODAY_NUMBER_DAY=$(echo "$TODAY_DATE" | cut -d- -f3)
+TODAY_NUMBER_DAY=$(echo "${TODAY_DATE}" | cut -d- -f3)
 
 echo "Creating dump of ${POSTGRES_DATABASE} database from ${POSTGRES_HOST}..."
-pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" > db.dump
+pg_dump -Fc "${POSTGRES_HOST_OPTS}" "${POSTGRES_DATABASE}" > db.dump
 
 echo "Uploading dump to ${S3_BUCKET}..."
 UPLOADED_FILE_KEY="${S3_PREFIX}/${POSTGRES_DATABASE}_${NOW_UTC}.dump"
 
-aws ${AWS_ARGS} s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
+aws "${AWS_ARGS}" s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
   echo "Failed to upload dump to S3"
   exit 2
 }
@@ -100,34 +100,34 @@ if [ -n "${BACKUP_KEEP_DAYS}" ]; then
 
   echo "Cutoff epoch: ${CUTOFF_EPOCH}"
 
-  OBJECTS=$(aws ${AWS_ARGS} s3api list-objects-v2 \
+  OBJECTS=$(aws "${AWS_ARGS}" s3api list-objects-v2 \
     --bucket "${S3_BUCKET}" \
     --prefix "${S3_PREFIX}/${POSTGRES_DATABASE}_" \
     --query "Contents[].[Key,LastModified]" \
     --output text)
 
-  if [ -z "$OBJECTS" ]; then
+  if [ -z "${OBJECTS}" ]; then
     echo "No backups found."
   else
-    echo "$OBJECTS" | while read -r key last_modified; do
+    echo "${OBJECTS}" | while read -r key last_modified; do
 
       # Convert LastModified (ISO8601) to epoch (Alpine-safe)
       object_epoch=$(date -u -D "%Y-%m-%dT%H:%M:%S" -d "${last_modified%%.*}" +%s 2>/dev/null)
-      if [ -z "$object_epoch" ]; then
-        echo "Failed to parse date for $key, skipping..."
+      if [ -z "${object_epoch}" ]; then
+        echo "Failed to parse date for ${key}, skipping..."
         continue
       fi
 
       # Extract day from filename
-      file_date=$(echo "$key" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n1)
-      file_day=$(echo "$file_date" | cut -d- -f3)
+      file_date=$(echo "${key}" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n1)
+      file_day=$(echo "${file_date}" | cut -d- -f3)
 
-      if [ "$object_epoch" -le "$CUTOFF_EPOCH" ]; then
-        if [ "$file_day" = "01" ]; then
+      if [ "${object_epoch}" -le "${CUTOFF_EPOCH}" ]; then
+        if [ "${file_day}" = "01" ]; then
           echo "Keeping monthly backup: s3://${S3_BUCKET}/${key}"
         else
           echo "Deleting old backup: s3://${S3_BUCKET}/${key}"
-          aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/${key}"
+          aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/${key}"
         fi
       fi
 
@@ -141,19 +141,19 @@ else
   # Removing logic yesterday backup if tomorrow is not 01 day of month
   DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
   FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
-  if [ "$TODAY_NUMBER_DAY" = "01" ]; then
+  if [ "${TODAY_NUMBER_DAY}" = "01" ]; then
     echo "Yesterday (${YESTERDAY_DATE}) was the last day of the month. Keeping only latest backup."
-    FILES_TO_DELETE=$(echo "$FILES_TO_DELETE" | tr '\t' '\n' | head -n -1)
+    FILES_TO_DELETE=$(echo "${FILES_TO_DELETE}" | tr '\t' '\n' | head -n -1)
   fi
 
   echo "Deleting backups with prefix '${DELETE_FILE_PREFIX}'..."
-  if [ -z "$FILES_TO_DELETE" ]; then
+  if [ -z "${FILES_TO_DELETE}" ]; then
     echo "No backups found to delete for yesterday (${YESTERDAY_DATE})."
   else
-    echo "$FILES_TO_DELETE" | tr '\t' '\n' | while read -r file_key; do
-      if [ -n "$file_key" ]; then
-        echo "Deleting s3://${S3_BUCKET}/$file_key"
-        aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/$file_key"
+    echo "${FILES_TO_DELETE}" | tr '\t' '\n' | while read -r file_key; do
+      if [ -n "${file_key}" ]; then
+        echo "Deleting s3://${S3_BUCKET}/${file_key}"
+        aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/${file_key}"
       fi
     done
   fi
