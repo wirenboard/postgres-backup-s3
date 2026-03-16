@@ -69,7 +69,7 @@ TODAY_DATE=$(date +%Y-%m-%d)
 TODAY_NUMBER_DAY=$(echo "${TODAY_DATE}" | cut -d- -f3)
 
 echo "Creating dump of ${POSTGRES_DATABASE} database from ${POSTGRES_HOST}..."
-pg_dump -Fc "${POSTGRES_HOST_OPTS}" "${POSTGRES_DATABASE}" > db.dump
+pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" > db.dump
 
 echo "Uploading dump to ${S3_BUCKET}..."
 UPLOADED_FILE_KEY="${S3_PREFIX}/${POSTGRES_DATABASE}_${NOW_UTC}.dump"
