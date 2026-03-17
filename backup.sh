@@ -74,7 +74,7 @@ pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" > db.dump
 echo "Uploading dump to ${S3_BUCKET}..."
 UPLOADED_FILE_KEY="${S3_PREFIX}/${POSTGRES_DATABASE}_${NOW_UTC}.dump"
 
-aws "${AWS_ARGS}" s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
+aws ${AWS_ARGS} s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
   echo "Failed to upload dump to S3"
   exit 2
 }
@@ -100,7 +100,7 @@ if [ -n "${BACKUP_KEEP_DAYS}" ]; then
 
   echo "Cutoff epoch: ${CUTOFF_EPOCH}"
 
-  OBJECTS=$(aws "${AWS_ARGS}" s3api list-objects-v2 \
+  OBJECTS=$(aws ${AWS_ARGS} s3api list-objects-v2 \
     --bucket "${S3_BUCKET}" \
     --prefix "${S3_PREFIX}/${POSTGRES_DATABASE}_" \
     --query "Contents[].[Key,LastModified]" \
@@ -127,7 +127,7 @@ if [ -n "${BACKUP_KEEP_DAYS}" ]; then
           echo "Keeping monthly backup: s3://${S3_BUCKET}/${key}"
         else
           echo "Deleting old backup: s3://${S3_BUCKET}/${key}"
-          aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/${key}"
+          aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/${key}"
         fi
       fi
 
@@ -140,7 +140,7 @@ else
 
   # Removing logic yesterday backup if tomorrow is not 01 day of month
   DELETE_FILE_PREFIX="${S3_PREFIX}/${POSTGRES_DATABASE}_${YESTERDAY_DATE}"
-  FILES_TO_DELETE=$(aws "${AWS_ARGS}" s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
+  FILES_TO_DELETE=$(aws ${AWS_ARGS} s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${DELETE_FILE_PREFIX}" --query "Contents[].Key" --output text)
   if [ "${TODAY_NUMBER_DAY}" = "01" ]; then
     echo "Yesterday (${YESTERDAY_DATE}) was the last day of the month. Keeping only latest backup."
     FILES_TO_DELETE=$(echo "${FILES_TO_DELETE}" | tr '\t' '\n' | head -n -1)
@@ -153,7 +153,7 @@ else
     echo "${FILES_TO_DELETE}" | tr '\t' '\n' | while read -r file_key; do
       if [ -n "${file_key}" ]; then
         echo "Deleting s3://${S3_BUCKET}/${file_key}"
-        aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/${file_key}"
+        aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/${file_key}"
       fi
     done
   fi
