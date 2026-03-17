@@ -74,7 +74,7 @@ pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" > db.dump
 echo "Uploading dump to ${S3_BUCKET}..."
 UPLOADED_FILE_KEY="${S3_PREFIX}/${POSTGRES_DATABASE}_${NOW_UTC}.dump"
 
-aws "${AWS_ARGS}" s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
+aws ${AWS_ARGS} s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
   echo "Failed to upload dump to S3"
   exit 2
 }
@@ -100,7 +100,7 @@ if [ -n "${BACKUP_KEEP_DAYS}" ]; then
 
   echo "Cutoff epoch: ${CUTOFF_EPOCH}"
 
-  OBJECTS=$(aws "${AWS_ARGS}" s3api list-objects-v2 \
+  OBJECTS=$(aws ${AWS_ARGS} s3api list-objects-v2 \
     --bucket "${S3_BUCKET}" \
     --prefix "${S3_PREFIX}/${POSTGRES_DATABASE}_" \
     --query "Contents[].[Key,LastModified]" \
@@ -127,7 +127,7 @@ if [ -n "${BACKUP_KEEP_DAYS}" ]; then
           echo "Keeping monthly backup: s3://${S3_BUCKET}/${key}"
         else
           echo "Deleting old backup: s3://${S3_BUCKET}/${key}"
-          aws "${AWS_ARGS}" s3 rm "s3://${S3_BUCKET}/${key}"
+          aws ${AWS_ARGS} s3 rm "s3://${S3_BUCKET}/${key}"
         fi
       fi
 
