@@ -1,9 +1,8 @@
 #! /bin/bash
+# shellcheck disable=SC2086  # AWS_ARGS, POSTGRES_HOST_OPTS intentionally word-splitted
 
 set -e
 set -o pipefail
-
-# shellcheck disable=SC2086  # AWS_ARGS, POSTGRES_HOST_OPTS intentionally word-splitted
 
 if [ "${S3_ACCESS_KEY_ID}" = "**None**" ]; then
   echo "You need to set the S3_ACCESS_KEY_ID environment variable."
@@ -69,19 +68,26 @@ TODAY_DATE=$(date +%Y-%m-%d)
 TODAY_NUMBER_DAY=$(echo "${TODAY_DATE}" | cut -d- -f3)
 
 echo "Creating dump of ${POSTGRES_DATABASE} database from ${POSTGRES_HOST}..."
-pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" > db.dump
+if [ "${AGE_RECIPIENT}" = "**None**" ]; then
+  DUMP_FILE="db.dump"
+  pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" > "${DUMP_FILE}"
+else
+  echo "Encrypting dump for ${AGE_RECIPIENT}"
+  DUMP_FILE="db.dump.age"
+  pg_dump -Fc ${POSTGRES_HOST_OPTS} "${POSTGRES_DATABASE}" | age -r "${AGE_RECIPIENT}" > "${DUMP_FILE}"
+fi
 
 echo "Uploading dump to ${S3_BUCKET}..."
-UPLOADED_FILE_KEY="${S3_PREFIX}/${POSTGRES_DATABASE}_${NOW_UTC}.dump"
+UPLOADED_FILE_KEY="${S3_PREFIX}/${POSTGRES_DATABASE}_${NOW_UTC}.${DUMP_FILE#db.}"
 
-aws ${AWS_ARGS} s3 cp db.dump "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
+aws ${AWS_ARGS} s3 cp "${DUMP_FILE}" "s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}" || {
   echo "Failed to upload dump to S3"
   exit 2
 }
 
 echo "DB backup uploaded successfully: s3://${S3_BUCKET}/${UPLOADED_FILE_KEY}"
 
-rm db.dump
+rm "${DUMP_FILE}"
 
 
 if [ -z "${BACKUP_KEEP_DAYS}" ]; then

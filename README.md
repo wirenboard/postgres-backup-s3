@@ -45,3 +45,20 @@ postgres-backup:
 ### Crontab format
 
 Schedule format with years support. More information about the scheduling can be found [here](https://github.com/aptible/supercronic/tree/master?tab=readme-ov-file#crontab-format)
+
+### Encryption
+
+Set `AGE_RECIPIENT` to an [age](https://github.com/FiloSottile/age) public key (`age1...`) to encrypt the dump before upload. The dump is piped from `pg_dump` straight into `age`, so it never lands on disk unencrypted, and the object gets the `.dump.age` extension. Only the public key goes to the container; keep the private key elsewhere.
+
+Generate a key pair with the image itself, without installing anything:
+
+```sh
+docker run --rm --entrypoint age-keygen ghcr.io/wirenboard/postgres-backup-s3:latest
+```
+
+It prints the private key (`AGE-SECRET-KEY-1...`) and, in a comment, the public key. Put the public key into `AGE_RECIPIENT` and store the private key in a password manager. Restore with:
+
+```sh
+age -d -i key.txt -o db.dump <database>_<time>.dump.age
+pg_restore -d <database> db.dump
+```
