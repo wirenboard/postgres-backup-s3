@@ -2,7 +2,7 @@ FROM alpine:3.19.1
 LABEL maintainer="Fedor Borshev <fedor@borshev.com>"
 
 RUN apk update \
-    && apk --no-cache add dumb-init postgresql-client curl aws-cli supercronic
+    && apk --no-cache add dumb-init postgresql-client curl aws-cli supercronic age
 
 
 ENV POSTGRES_DATABASE **None**
@@ -20,6 +20,7 @@ ENV S3_ENDPOINT **None**
 ENV S3_S3V4 no
 ENV SCHEDULE **None**
 ENV SUCCESS_WEBHOOK **None**
+ENV AGE_RECIPIENT **None**
 
 ADD entrypoint.sh .
 ADD backup.sh .
